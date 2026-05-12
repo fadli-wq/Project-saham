@@ -13,12 +13,16 @@ Route::get('/emiten/{kode}', [EmitenController::class, 'show'])->name('emiten.sh
 Route::get('/sektor', [SectorController::class, 'index'])->name('sector.index');
 Route::get('/sektor/{slug}', [SectorController::class, 'show'])->name('sector.show');
 
-// TODO: Hapus rute ini setelah berhasil dijalankan di server!
-Route::get('/install-db-secret', function () {
+// Rute darurat untuk update harga jika terminal tidak bisa diakses
+Route::get('/update-harga-manual', function () {
+    // Set time limit ke 0 agar browser tidak timeout (karena proses 500 saham sangat lama)
+    set_time_limit(0);
+    
     try {
-        \Illuminate\Support\Facades\Artisan::call('migrate:fresh', ['--seed' => true, '--force' => true]);
-        return "Berhasil! Database MySQL telah di-reset dan diisi ratusan data. <br><br>Log Output:<br>" . nl2br(\Illuminate\Support\Facades\Artisan::output());
+        echo "Sedang memproses 500+ emiten... Mohon tunggu dan jangan tutup halaman ini.<br>";
+        \Illuminate\Support\Facades\Artisan::call('saham:update');
+        return "Berhasil! Seluruh harga saham telah diperbarui ke data terbaru. <br><br>Log:<br>" . nl2br(\Illuminate\Support\Facades\Artisan::output());
     } catch (\Exception $e) {
-        return "Gagal: " . $e->getMessage();
+        return "Gagal melakukan update: " . $e->getMessage();
     }
 });
