@@ -28,46 +28,53 @@ class UpdateStockData extends Command
     public function handle()
     {
         $emitens = Emiten::all();
-        $this->info("Memulai update data saham dari Yahoo Finance untuk {$emitens->count()} emiten...");
+        $total = $emitens->count();
+        $this->info("Memulai update data saham massal untuk {$total} emiten...");
 
-        $bar = $this->output->createProgressBar($emitens->count());
+        // Kita proses dalam kelompok (chunk) berisi 50 saham agar tidak ditolak Yahoo
+        $chunks = $emitens->chunk(50);
+        
+        $bar = $this->output->createProgressBar($total);
         $bar->start();
 
-        foreach ($emitens as $emiten) {
-            // Format kode saham untuk Yahoo Finance Indonesia (tambah .JK)
-            $symbol = $emiten->kode . '.JK';
+        foreach ($chunks as $chunk) {
+            $symbols = $chunk->map(fn($e) => $e->kode . '.JK')->implode(',');
             
             try {
-                // Menggunakan endpoint Chart API v8 yang tidak memerlukan Crumb/Auth
+                // Menggunakan Quote API v7 yang mendukung multiple symbols
                 $response = Http::withHeaders([
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-                ])->get("https://query2.finance.yahoo.com/v8/finance/chart/{$symbol}");
+                ])->get("https://query2.finance.yahoo.com/v7/finance/quote?symbols={$symbols}");
 
                 if ($response->successful()) {
-                    $data = $response->json();
+                    $results = $response->json()['quoteResponse']['result'] ?? [];
                     
-                    if (isset($data['chart']['result'][0]['meta']['regularMarketPrice'])) {
-                        $meta = $data['chart']['result'][0]['meta'];
-                        $price = $meta['regularMarketPrice'];
+                    foreach ($results as $quote) {
+                        $kode = str_replace('.JK', '', $quote['symbol']);
+                        $emiten = $chunk->where('kode', $kode)->first();
                         
-                        // Update database
-                        $emiten->update([
-                            'harga' => $price,
-                            // Touch updated_at agar waktu terakhir diperbarui berubah
-                            'updated_at' => now(),
-                        ]);
+                        if ($emiten) {
+                            $emiten->update([
+                                'harga' => $quote['regularMarketPrice'] ?? $emiten->harga,
+                                'ytd_return' => $quote['regularMarketChangePercent'] ?? $emiten->ytd_return,
+                                'market_cap' => isset($quote['marketCap']) ? ($quote['marketCap'] / 1000000000000) : $emiten->market_cap, // Convert to Trillion
+                                'volume' => $quote['regularMarketVolume'] ?? $emiten->volume,
+                                'per' => $quote['trailingPE'] ?? $emiten->per,
+                                'updated_at' => now(),
+                            ]);
+                        }
                     }
                 }
             } catch (\Exception $e) {
-                $this->error("\nGagal update {$emiten->kode}: " . $e->getMessage());
+                $this->error("\nGagal update kelompok: " . $e->getMessage());
             }
 
-            $bar->advance();
-            // Jeda 500ms agar tidak terkena rate limit dari Yahoo
-            usleep(500000);
+            $bar->advance($chunk->count());
+            // Jeda singkat antar kelompok
+            usleep(200000);
         }
 
         $bar->finish();
-        $this->info("\nBerhasil mengupdate data saham!");
+        $this->info("\nBerhasil mengupdate seluruh data statistik!");
     }
 }
