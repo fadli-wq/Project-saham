@@ -6,7 +6,7 @@
     <section class="hero">
         <div class="hero-content">
             <h1 class="hero-title">Stock<span class="text-accent">Stats</span> ID</h1>
-            <p class="hero-subtitle">Statistik fundamental emiten Indonesia — visualisasi ala game stats</p>
+            <p class="hero-subtitle">Statistik fundamental emiten Indonesia — visualisasi dalam bentuk stats</p>
         </div>
         <div class="hero-stats">
             <div class="stat-box">
