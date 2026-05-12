@@ -213,11 +213,11 @@ class EmitenGelombang5Seeder extends Seeder
             $e['der'] = rand(0, 3);
             $e['roe'] = rand(-5, 25);
             $e['roa'] = rand(-5, 15);
-            $e['dividend_yield'] = 0;
-            $e['ytd_return'] = 0;
-            $e['one_year_return'] = 0;
-            $e['three_year_return'] = 0;
-            $e['volume'] = 0;
+            $e['dividend_yield'] = rand(0, 8);
+            $e['ytd_return'] = rand(-20, 30);
+            $e['one_year_return'] = rand(-30, 50);
+            $e['three_year_return'] = rand(-50, 100);
+            $e['volume'] = rand(1000000, 50000000);
 
             Emiten::updateOrCreate(['kode' => $e['kode']], $e);
         }

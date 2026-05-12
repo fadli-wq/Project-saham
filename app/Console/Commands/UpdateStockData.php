@@ -31,9 +31,6 @@ class UpdateStockData extends Command
         $total = $emitens->count();
         $this->info("Memulai update data saham massal untuk {$total} emiten...");
 
-        // RESET semua return ke 0 terlebih dahulu agar data palsu seeder hilang
-        Emiten::query()->update(['ytd_return' => 0]);
-
         // Kita proses dalam kelompok (chunk) berisi 50 saham
         $chunks = $emitens->chunk(50);
         
